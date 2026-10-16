@@ -11,7 +11,9 @@ import SwiftUI
 struct HotelClientAppApp: App {
     var body: some Scene {
         WindowGroup {
-            HotelListScreen()
+            NavigationStack {
+                HotelListScreen()
+            }.environment(HotelStore(httpClient: HTTPClient()))
         }
     }
 }

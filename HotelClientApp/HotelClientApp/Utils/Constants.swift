@@ -13,13 +13,13 @@ struct Constants {
 
         static let base = URL(string: "http://localhost:8080/api/")!
 
-        static func hotels(sort: SortOption? = nil,filters: Set<FilterOption>? = nil, page: Int = 1, limit: Int = 10) -> URL {
+        static func hotels(sort: SortOption? = nil,filters: Set<FilterOption>? = nil, page: Int = 1, pageSize: Int = 10) -> URL {
 
             let url = base.appending(path: "hotels")
 
             var queryItems: [URLQueryItem] = [
                 URLQueryItem(name: "page", value: String(page)),
-                URLQueryItem(name: "limit", value: String(limit))
+                URLQueryItem(name: "limit", value: String(pageSize))
             ]
 
             if let sort {

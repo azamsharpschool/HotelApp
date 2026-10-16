@@ -14,6 +14,7 @@ struct HotelListScreen: View {
     @State private var sortOption: SortOption?
     @State private var filters: Set<FilterOption> = []
     @State private var activeSheet: Sheet?
+    @State private var pageSize: Int = 10
     
     private enum Sheet: Identifiable {
         case filter
@@ -37,8 +38,18 @@ struct HotelListScreen: View {
                 }.buttonStyle(.borderless)
             }
             
+            PageSizeView(initialPageSize: pageSize) { pageSize in
+                self.pageSize = pageSize
+                Task { await loadHotels() }
+            }
+            
             ForEach(hotelStore.hotels) { hotel in
                 HotelCellView(hotel: hotel)
+                    .task {
+                        if hotel.id == hotelStore.hotels.last?.id {
+                            await loadHotels()
+                        }
+                    }
             }
         }
         .sheet(item: $activeSheet, content: { sheet in
@@ -59,10 +70,10 @@ struct HotelListScreen: View {
             await loadHotels()
         }.navigationTitle("Hotels")
     }
-    
+     
     private func loadHotels() async {
         do {
-            try await hotelStore.loadHotels(sortOption: sortOption, filters: filters)
+            try await hotelStore.loadHotels(sortOption: sortOption, filters: filters, pageSize: pageSize)
         } catch {
             print(error.localizedDescription)
         }

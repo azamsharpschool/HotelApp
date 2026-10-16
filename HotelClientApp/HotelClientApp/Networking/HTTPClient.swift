@@ -7,8 +7,6 @@
 
 import SwiftUI
 
-
-
 enum HTTPMethod {
     case get
     case post(Data)
