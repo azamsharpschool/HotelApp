@@ -11,10 +11,12 @@ struct HotelListScreen: View {
     
     @Environment(HotelStore.self) private var hotelStore
     
-    @State private var sortOption: SortOption?
-    @State private var filters: Set<FilterOption> = []
+    //@State private var sortOption: SortOption?
+    //@State private var filters: Set<FilterOption> = []
     @State private var activeSheet: Sheet?
-    @State private var pageSize: Int = 10
+    //@State private var pageSize: Int = 10
+    
+    @State private var query = HotelQuery()
     
     private enum Sheet: Identifiable {
         case filter
@@ -38,8 +40,9 @@ struct HotelListScreen: View {
                 }.buttonStyle(.borderless)
             }
             
-            PageSizeView(initialPageSize: pageSize) { pageSize in
-                self.pageSize = pageSize
+            PageSizeView(initialPageSize: query.pageSize) { pageSize in
+                query.pageSize = pageSize
+                //self.pageSize = pageSize
                 Task { await loadHotels() }
             }
             
@@ -52,16 +55,25 @@ struct HotelListScreen: View {
                     }
             }
         }
+        .safeAreaInset(edge: .bottom) {
+            if hotelStore.isLoading {
+                ProgressView("Loading hotels...")
+                    .controlSize(.regular)
+                    .frame(maxWidth: .infinity)
+                    .padding(12)
+                    .background(.regularMaterial)
+            }
+        }
         .sheet(item: $activeSheet, content: { sheet in
             switch sheet {
                 case .filter:
-                FilterView(initialFilters: filters) { filters in
-                    self.filters = filters
+                FilterView(initialFilters: query.filters) { filters in
+                    query.filters = filters
                     Task { await loadHotels() }
                 }.presentationDetents([.fraction(0.25)])
                 case .sort:
-                SortView(initialSelection: sortOption) { option in
-                    sortOption = option
+                SortView(initialSelection: query.sort) { option in
+                    query.sort = option
                     Task { await loadHotels() }
                 }.presentationDetents([.fraction(0.25)])
             }
@@ -73,7 +85,7 @@ struct HotelListScreen: View {
      
     private func loadHotels() async {
         do {
-            try await hotelStore.loadHotels(sortOption: sortOption, filters: filters, pageSize: pageSize)
+            try await hotelStore.loadHotels(query)
         } catch {
             print(error.localizedDescription)
         }

@@ -13,16 +13,16 @@ struct Constants {
 
         static let base = URL(string: "http://localhost:8080/api/")!
 
-        static func hotels(sort: SortOption? = nil,filters: Set<FilterOption>? = nil, page: Int = 1, pageSize: Int = 10) -> URL {
+        static func hotels(query: HotelQuery, page: Int = 1) -> URL {
 
             let url = base.appending(path: "hotels")
 
             var queryItems: [URLQueryItem] = [
                 URLQueryItem(name: "page", value: String(page)),
-                URLQueryItem(name: "limit", value: String(pageSize))
+                URLQueryItem(name: "limit", value: String(query.pageSize))
             ]
 
-            if let sort {
+            if let sort = query.sort {
                 queryItems.append(
                     URLQueryItem(
                         name: "sort",
@@ -31,9 +31,8 @@ struct Constants {
                 )
             }
 
-            if let filters {
-
-                for option in filters {
+            
+            for option in query.filters {
                     queryItems.append(
                         URLQueryItem(
                             name: option.rawValue,
@@ -41,7 +40,7 @@ struct Constants {
                         )
                     )
                 }
-            }
+            
 
             return url.appending(queryItems: queryItems)
         }
