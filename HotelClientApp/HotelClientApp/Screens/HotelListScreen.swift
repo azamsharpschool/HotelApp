@@ -10,13 +10,9 @@ import SwiftUI
 struct HotelListScreen: View {
     
     @Environment(HotelStore.self) private var hotelStore
-    
-    //@State private var sortOption: SortOption?
-    //@State private var filters: Set<FilterOption> = []
     @State private var activeSheet: Sheet?
-    //@State private var pageSize: Int = 10
-    
     @State private var query = HotelQuery()
+    @State private var loadingPhase = LoadingPhase.loading
     
     private enum Sheet: Identifiable {
         case filter
@@ -25,53 +21,49 @@ struct HotelListScreen: View {
         var id: Self { self }
     }
     
+    private enum LoadingPhase {
+        case loading
+        case success
+        case failure(Error)
+    }
+    
     var body: some View {
-        List {
-            
-            HStack {
-                
-                Button("Filter") {
-                    activeSheet = .filter
-                }.buttonStyle(.borderless)
-                
-                Spacer()
-                Button("Sort") {
-                    activeSheet = .sort
-                }.buttonStyle(.borderless)
-            }
-            
-            PageSizeView(initialPageSize: query.pageSize) { pageSize in
-                query.pageSize = pageSize
-                //self.pageSize = pageSize
-                Task { await loadHotels() }
-            }
-            
-            ForEach(hotelStore.hotels) { hotel in
-                HotelCellView(hotel: hotel)
-                    .task {
-                        if hotel.id == hotelStore.hotels.last?.id {
-                            await loadHotels()
+        
+        Group {
+            switch loadingPhase {
+            case .loading:
+                ProgressView("Loading hotels...")
+            case .success:
+                if hotelStore.hotels.isEmpty {
+                    ContentUnavailableView {
+                        Label("No Hotels Found", systemImage: "building.2")
+                    } description: {
+                        Text("No hotels match your search criteria.")
+                    } actions: {
+                        Button("Clear Filters") {
+                            query.filters.removeAll()
+                            query.sort = nil
+                            Task { await loadHotels() }
                         }
                     }
-            }
-        }
-        .safeAreaInset(edge: .bottom) {
-            if hotelStore.isLoading {
-                ProgressView("Loading hotels...")
-                    .controlSize(.regular)
-                    .frame(maxWidth: .infinity)
-                    .padding(12)
-                    .background(.regularMaterial)
+                } else {
+                    hotelList
+                }
+            case .failure(let error):
+                ContentUnavailableView(
+                    "Unable to Load Hotels",
+                    systemImage: "exclamationmark.triangle",
+                    description: Text(error.localizedDescription))
             }
         }
         .sheet(item: $activeSheet, content: { sheet in
             switch sheet {
-                case .filter:
+            case .filter:
                 FilterView(initialFilters: query.filters) { filters in
                     query.filters = filters
                     Task { await loadHotels() }
                 }.presentationDetents([.fraction(0.25)])
-                case .sort:
+            case .sort:
                 SortView(initialSelection: query.sort) { option in
                     query.sort = option
                     Task { await loadHotels() }
@@ -82,12 +74,39 @@ struct HotelListScreen: View {
             await loadHotels()
         }.navigationTitle("Hotels")
     }
-     
+    
+    private var hotelList: some View {
+        List {
+            HotelToolbarView(
+                pageSize: query.pageSize,
+                onSort: {
+                    activeSheet = .sort
+                },
+                onFilter: {
+                    activeSheet = .filter
+                },
+                onPageSizeChange: { size in
+                    query.pageSize = size
+                    Task { await loadHotels() }
+                }
+            )
+            
+            HotelResultsView(hotels: hotelStore.hotels) {
+                await loadHotels()
+            }
+        }
+    }
+    
     private func loadHotels() async {
         do {
             try await hotelStore.loadHotels(query)
+            loadingPhase = .success
         } catch {
-            print(error.localizedDescription)
+            if hotelStore.hotels.isEmpty {
+                loadingPhase = .failure(error)
+            } else {
+                print(error.localizedDescription)
+            }
         }
     }
 }

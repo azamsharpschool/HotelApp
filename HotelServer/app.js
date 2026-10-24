@@ -74,3 +74,4 @@ const filterHotels = (hotels, query) => {
 app.listen(8080, () => {
     console.log("Server is running...")
 })
+
